@@ -1,25 +1,45 @@
 from flask import Flask, jsonify, request
 from data import products
-
+ 
 app = Flask(__name__)
-
-# TODO: Implement homepage route that returns a welcome message
-
-@app.route("/")
+ 
+ 
+# Homepage: confirms the API is running and lists available endpoints
+@app.route("/", methods=["GET"])
 def home():
-    pass  # TODO: Return a welcome message
-
-# TODO: Implement GET /products route that returns all products or filters by category
-
-@app.route("/products")
+    return jsonify({
+        "message": "Welcome to the Product Catalog API",
+        "endpoints": ["/products", "/products/<id>", "/products?category=<name>"],
+    }), 200
+ 
+ 
+# GET /products: returns the full product list, or only products in a
+# category when ?category= is given (case-insensitive match)
+@app.route("/products", methods=["GET"])
 def get_products():
-    pass  # TODO: Return all products or filter by ?category=
-
-# TODO: Implement GET /products/<id> route that returns a specific product by ID or 404
-
-@app.route("/products/<int:id>")
+    category = request.args.get("category")
+    if category:
+        wanted = category.strip().lower()
+        filtered = [p for p in products if p["category"].lower() == wanted]
+        return jsonify(filtered), 200
+    return jsonify(products), 200
+ 
+ 
+# GET /products/<id>: returns a single product, or a JSON 404 if the ID is unknown
+@app.route("/products/<int:id>", methods=["GET"])
 def get_product_by_id(id):
-    pass  # TODO: Return product by ID or 404
-
+    product = next((p for p in products if p["id"] == id), None)
+    if product is None:
+        return jsonify({"error": f"Product with id {id} not found"}), 404
+    return jsonify(product), 200
+ 
+ 
+# Any unknown route (or a non-integer ID) also gets a JSON 404
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({"error": "Resource not found"}), 404
+ 
+ 
 if __name__ == "__main__":
     app.run(debug=True)
+ 
